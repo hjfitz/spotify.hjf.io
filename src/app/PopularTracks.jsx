@@ -11,7 +11,10 @@ const PopularTracks = ({tracks, playTrack}) => (
 					onClick={() => playTrack(track.uri)}
 				>
 					<img className="inline h-6 mr-2" src={url} />
-					{track.name} by	{track.artists.map(a => a.name).join(', ')}	 ({track.album.name} ({track.album.release_date}))
+					<div>
+						<span className="block">{track.name} by	{track.artists.map(a => a.name).join(', ')}</span>
+						<span className="block">({track.album.name} ({track.album.release_date}))</span>
+					</div>
 				</li>
 			)
 		})}
