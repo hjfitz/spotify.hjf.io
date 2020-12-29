@@ -4,11 +4,11 @@ import {render} from 'react-dom'
 import PopularTracks from './PopularTracks'
 import PopularArtists from './PopularArtists'
 import {loginUrl, makeSpotifyRequest} from './spotify'
+import {capitalise, titleify} from './util'
 
 const entry = document.getElementById('react')
 
 const App = () => {
-
 	// get our token response, check if it's valid
 	const resp = JSON.parse(localStorage.getItem('tokenResponse'))
 	let isValid = false
@@ -27,8 +27,9 @@ const App = () => {
 	const [playing, setPlaying] = useState(null)
 
 
-	const termLookup = {'short_term': '4 weeks', 'long_term': 'several years'}
+	const termLookup = {'short_term': '4 Weeks', 'long_term': 'All Time'}
 	const terms = Object.keys(termLookup)
+	
 	const [term, setCurrentTerm] = useState(terms[0])
 	const [type, setCurentType] = useState('artists')
 
@@ -126,16 +127,20 @@ const App = () => {
 		fetchNowplaying()
 		setInterval(fetchNowplaying, 10e3)
 	}, [token])
+
 	if (!token) {
 		window.location.href = loginUrl
 		return ''
 	}
+
 	if (!data) return <div>Loading data</div>
+
 	return (
-		<main className="container mx-auto">
+		<main className="container px-4 mx-auto">
 			<header className="flex flex-row flex-wrap pt-2">
 				<span className="mr-4"><strong className="font-semibold">User:</strong> {data.self.display_name} ({data.self.id})</span>
 				<span className="mr-4"><strong className="font-semibold">Expires on:</strong> {token.expires}</span>
+
 				{playing 
 					? (
 						<span className="mr-4">
@@ -153,38 +158,42 @@ const App = () => {
 			</header>
 			<section>
 
-				<div className="flex justify-around my-4">
+				<div className="flex flex-col justify-around my-4 md:flex-row">
 					<div>
 						<h2 className="py-2 text-lg text-center">Type</h2>
-						<button 
-							className={`selection-button ${type === 'artists' && 'active'}`} 
-							onClick={setType('artists')}
-						>
-							Artists
-						</button>
-						<button 
-							className={`selection-button ${type === 'tracks' && 'active'}`} 
-							onClick={setType('tracks')}
-						>
-							Tracks
-						</button>
+						<div className="flex flex-wrap items-center justify-center">
+							<button 
+								className={`selection-button ${type === 'artists' && 'active'}`} 
+								onClick={setType('artists')}
+							>
+								Artists
+							</button>
+							<button 
+								className={`selection-button ${type === 'tracks' && 'active'}`} 
+								onClick={setType('tracks')}
+							>
+								Tracks
+							</button>
+						</div>
 					</div>
 					<div>
 						<h2 className="py-2 text-lg text-center">Term</h2>
-						{Object.entries(termLookup).map(([termL, desc]) => (
-							<button 
-								className={`selection-button ${term === termL && 'active'}`} 
-								key={termL} 
-								onClick={setTerm(termL)}
-							>
-								{termL.replace('_', ' ')} ({desc})
-							</button>
-						))}
+						<div className="flex flex-wrap items-center justify-center">
+							{Object.entries(termLookup).map(([termL, desc]) => (
+								<button 
+									className={`selection-button ${term === termL && 'active'}`} 
+									key={termL} 
+									onClick={setTerm(termL)}
+								>
+									{titleify(termL)} ({desc})
+								</button>
+							))}
+						</div>
 					</div>
 				</div>
 					
 
-				<div className="ml-8">
+				<div className="md:ml-8">
 					{type === 'artists' 
 						? <PopularArtists playArtist={playArtist} artists={data.top[type][term].items} />
 						: <PopularTracks playTrack={playTrack} tracks={data.top[type][term].items} />
