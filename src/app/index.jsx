@@ -11,10 +11,13 @@ const App = () => {
 
 	// get our token response, check if it's valid
 	const resp = JSON.parse(localStorage.getItem('tokenResponse'))
-	const expires = resp?.expires
-	const isValid = new Date(expires) > new Date()
-	// if so, init state
+	let isValid = false
+	if (resp && resp.expires) {
+		const expires = resp.expires
+		isValid = new Date(expires) > new Date()
+	}
 	const tokenState = isValid ? resp : null
+
 	if (!isValid) localStorage.clear()
 	const [token, setToken] = useState(tokenState)
 
@@ -130,7 +133,7 @@ const App = () => {
 	if (!data) return <div>Loading data</div>
 	return (
 		<main className="container mx-auto">
-			<header className="flex flex-row flex-wrap">
+			<header className="flex flex-row flex-wrap pt-2">
 				<span className="mr-4"><strong className="font-semibold">User:</strong> {data.self.display_name} ({data.self.id})</span>
 				<span className="mr-4"><strong className="font-semibold">Expires on:</strong> {token.expires}</span>
 				{playing 
@@ -149,14 +152,10 @@ const App = () => {
 				}
 			</header>
 			<section>
-				<header>
-					<h1>Your Popular Music</h1>
-					<span>Showing all {term.replace('_', ' ')} favourite {type}</span>
-				</header>
 
-				<div className="flex justify-around mt-4">
+				<div className="flex justify-around my-4">
 					<div>
-						<h2 className="text-center">Type</h2>
+						<h2 className="py-2 text-lg text-center">Type</h2>
 						<button 
 							className={`selection-button ${type === 'artists' && 'active'}`} 
 							onClick={setType('artists')}
@@ -171,7 +170,7 @@ const App = () => {
 						</button>
 					</div>
 					<div>
-						<h2 className="text-center">Term</h2>
+						<h2 className="py-2 text-lg text-center">Term</h2>
 						{Object.entries(termLookup).map(([termL, desc]) => (
 							<button 
 								className={`selection-button ${term === termL && 'active'}`} 
@@ -183,6 +182,8 @@ const App = () => {
 						))}
 					</div>
 				</div>
+					
+
 				<div className="ml-8">
 					{type === 'artists' 
 						? <PopularArtists playArtist={playArtist} artists={data.top[type][term].items} />
