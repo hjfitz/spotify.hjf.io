@@ -1,8 +1,7 @@
-import React, {useState, useEffect} from 'react'
+import {useState, useEffect} from 'react'
+import {SpotifyApi} from './spotify.api'
 
 export default function useLogin() {
-	console.log('oi')
-
 	const resp = JSON.parse(localStorage.getItem('tokenResponse'))
 	let isValid = false
 	if (resp && resp.expires) {
@@ -12,14 +11,16 @@ export default function useLogin() {
 
 	const tokenState = isValid ? resp : null
 
-	if (!isValid) localStorage.clear()
+	if (isValid) {
+		SpotifyApi.initialise(tokenState.access_token)
+	} else {
+		localStorage.clear()
+	}
 
 	const [token, setToken] = useState(tokenState)
 	const [error, setError] = useState(null)
-	console.log('initialised state')
 
 	useEffect(() => {
-		console.log('useEffect..?')
 		const {hash} = window.location
 		console.log(hash)
 		if (!hash) return 
@@ -48,11 +49,14 @@ export default function useLogin() {
 
 		localStorage.setItem('tokenResponse', JSON.stringify(response))
 
+		SpotifyApi.initialise(response.access_token)
+
 		setToken(response)
 		// todo: remove window hash
 		history.pushState("", document.title, window.location.pathname)
-		return {token, error, setError}
 	}, [])
+
+	return {token, error}
 
 }
 

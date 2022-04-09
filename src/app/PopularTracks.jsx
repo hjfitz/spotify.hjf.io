@@ -1,23 +1,29 @@
 import React from 'react'
+import Container from './ItemContainer'
 
+const Track = ({name, albumName, onClick, albumReleaseDate, src, artists}) => (
+	<Container onClick={onClick} src={src}>
+		<div className="inline">
+			<span className="block">{name} by {artists.map(a => a.name).join(', ')}</span>
+			<span className="block">{albumName} ({albumReleaseDate})</span>
+		</div>
+	</Container>
+)
 const PopularTracks = ({tracks, playTrack}) => (
-	<ol>
+	<ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 		{tracks.map(track => {
 			const {length, [length - 1]: {url}} = track.album.images
+			const onClick = () => playTrack(track.url)
 			return (
-				<li 
-					className="flex flex-col items-center py-2 pr-2 cursor-pointer md:flex-row md:items-start hover:text-gray-700 duration-300"
-					key={track.uri} 
-					onClick={() => playTrack(track.uri)}
-				>
-					<div className="mr-2 h-18">
-						<img className="track-img" src={url} />
-					</div>
-					<div>
-						<span className="block">{track.name} by	{track.artists.map(a => a.name).join(', ')}</span>
-						<span className="block">({track.album.name} ({track.album.release_date}))</span>
-					</div>
-				</li>
+				<Track
+					name={track.name}
+					key={track.id}
+					albumName={track.album_name}
+					onClick={onClick}
+					albumReleaseDate={track.album.release_date}
+					src={url}
+					artists={track.artists}
+				/>
 			)
 		})}
 	</ol>

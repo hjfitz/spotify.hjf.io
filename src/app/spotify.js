@@ -1,5 +1,3 @@
-// this works, but destructuring from process.env does not
-// wat fak
 const clientID = process.env.SPOTIFY_CLIENT_ID
 const redirectURI = process.env.SPOTIFY_REDIRECT_URI
 const scopesRaw = process.env.SPOTIFY_SCOPES

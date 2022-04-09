@@ -5,81 +5,47 @@ import PopularTracks from './PopularTracks'
 import PopularArtists from './PopularArtists'
 import {loginUrl, makeSpotifyRequest} from './spotify'
 import {capitalise, titleify} from './util'
+import useLogin from './useLogin'
+import {SpotifyApi} from './spotify.api'
+
+// useLogin:
+// if we have a valid token, great
+// if not, redirect to login and do the flow
+// end goal: initialise the SpotifyApi singleton
+// meantime: return the token for use
 
 const entry = document.getElementById('react')
 
+const termLookup = {
+	'short_term': '4 Weeks', 
+	'medium_term': 'Last 6 Months',
+	'long_term': 'All Time',
+}
+
+const terms = Object.keys(termLookup)
+
 const App = () => {
 	// get our token response, check if it's valid
-	const resp = JSON.parse(localStorage.getItem('tokenResponse'))
-	let isValid = false
-	if (resp && resp.expires) {
-		const expires = resp.expires
-		isValid = new Date(expires) > new Date()
-	}
-	const tokenState = isValid ? resp : null
-
-	if (!isValid) localStorage.clear()
-	const [token, setToken] = useState(tokenState)
-
 	const [data, setData] = useState(null)
-	// todo: handle
-	const [error, setError] = useState(null)
 	const [playing, setPlaying] = useState(null)
-
-
-	const termLookup = {'short_term': '4 Weeks', 'long_term': 'All Time'}
-	const terms = Object.keys(termLookup)
-	
 	const [term, setCurrentTerm] = useState(terms[0])
-	const [type, setCurentType] = useState('artists')
+	const [type, setCurentType] = useState('tracks')
 
 	const setType = type => () => setCurentType(type)
 	const setTerm = term => () => setCurrentTerm(term)
 
-	useEffect(() => {
-		const {hash} = window.location
-		if (!hash) return 
-
-		const response = hash.substring(1).split('&').reduce((acc, cur) => {
-			const [key, val] = cur.split('=')
-			if (!(key in acc)) acc[key] = val
-			return acc
-		}, {})
-
-
-		if ('error' in response) {
-			console.log('there was an error!')
-			setError(response.error)
-			return
-		}
-
-		if (!('access_token' in response)) {
-			setError('No access token found!')
-			return
-		}
-
-		const now = new Date()
-		now.setSeconds(now.getSeconds() + parseInt(response.expires_in, 10))
-		response.expires = now.toString()
-
-		localStorage.setItem('tokenResponse', JSON.stringify(response))
-
-		setToken(response)
-		// todo: remove window hash
-		history.pushState("", document.title, window.location.pathname)
-
-	}, [])
+	const {token} = useLogin()
 
 	async function getUserData() {
-		const {access_token} = token
-		const self = await makeSpotifyRequest('/me', access_token)
+		const self = await SpotifyApi.client.get('/me') // makeSpotifyRequest('/me', access_token)
 		const types = ['tracks', 'artists']
 			
 		const data = await Promise.all(types.map(async type => {
 			const resp = await Promise.all(terms.map(async term => {
 				return {
 					term,
-					data: await makeSpotifyRequest(`/me/top/${type}?limit=10&time_range=${term}`, access_token) } 
+					data: await SpotifyApi.client.get(`/me/top/${type}?limit=10&time_range=${term}`)
+				} 
 			})) 
 
 			const topData = resp.reduce((acc, cur) => {
@@ -99,7 +65,7 @@ const App = () => {
 
 	async function fetchNowplaying() {
 		try {
-			const playingResp = await makeSpotifyRequest(`/me/player/currently-playing`, token.access_token) 
+			const playingResp = await SpotifyApi.client.get(`/me/player/currently-playing`)
 			const {images} = playingResp.item.album
 			const {length, [length - 1]: cover} = images
 			setPlaying({
@@ -114,11 +80,11 @@ const App = () => {
 	}
 
 	function playTrack(uri) {
-		return makeSpotifyRequest('/me/player/play', token.access_token, 'PUT', {uris: [uri]})
+		return SpotifyApi.client.put('/me/player/play', {uris: [uri]})
 	}
 
 	function playArtist(uri) {
-		return makeSpotifyRequest('/me/player/play', token.access_token, 'PUT', {context_uri: uri})
+		return SpotifyApi.client.put('/me/player/play', {context_uri: uri})
 	}
 
 	useEffect(() => {
@@ -139,7 +105,6 @@ const App = () => {
 		<main className="container px-4 mx-auto">
 			<header className="flex flex-row flex-wrap pt-2">
 				<span className="mr-4"><strong className="font-semibold">User:</strong> {data.self.display_name} ({data.self.id})</span>
-				<span className="mr-4"><strong className="font-semibold">Expires on:</strong> {token.expires}</span>
 
 				{playing 
 					? (
@@ -158,7 +123,7 @@ const App = () => {
 			</header>
 			<section>
 
-				<div className="flex flex-col justify-around my-4 md:flex-row">
+				<div className="flex flex-col justify-between my-4 md:flex-row">
 					<div>
 						<h2 className="py-2 text-lg text-center">Type</h2>
 						<div className="flex flex-wrap items-center justify-center">
@@ -193,7 +158,7 @@ const App = () => {
 				</div>
 					
 
-				<div className="md:ml-8">
+				<div className="">
 					{type === 'artists' 
 						? <PopularArtists playArtist={playArtist} artists={data.top[type][term].items} />
 						: <PopularTracks playTrack={playTrack} tracks={data.top[type][term].items} />
