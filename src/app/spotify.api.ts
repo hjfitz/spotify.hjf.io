@@ -46,9 +46,11 @@ export class SpotifyApi {
 		}
 
 		if (method !== 'GET') {
-			requestInit.headers['content-type'] = 'application/json'
+			requestInit.headers['Content-Type'] = 'application/json'
 			requestInit.body = JSON.stringify(body)
 		}
+
+		console.log({method, endpoint, body, authHeader})
 
 		return fetch(url, requestInit).then(r => r.json()) as Promise<T>
 	}

@@ -1,44 +1,78 @@
-import React, {useEffect, useState} from 'react'
+import * as React from 'react'
 import {render} from 'react-dom'
 
 import PopularTracks from './PopularTracks'
 import PopularArtists from './PopularArtists'
-import {loginUrl, makeSpotifyRequest} from './spotify'
+import {loginUrl} from './spotify'
 import {capitalise, titleify} from './util'
 import useLogin from './useLogin'
 import {SpotifyApi} from './spotify.api'
 
-// useLogin:
-// if we have a valid token, great
-// if not, redirect to login and do the flow
-// end goal: initialise the SpotifyApi singleton
-// meantime: return the token for use
-
 const entry = document.getElementById('react')
 
-const termLookup = {
-	'short_term': '4 Weeks', 
-	'medium_term': 'Last 6 Months',
-	'long_term': 'All Time',
+enum Term {
+	Short = 'short_term',
+	Medium = 'medium_term',
+	Long = 'long_term',
 }
 
-const terms = Object.keys(termLookup)
+enum Types {
+	Tracks = 'tracks',
+	Artists = 'artists',
+}
+
+const termLookup: Record<Term, string> = {
+	[Term.Short]: '4 Weeks', 
+	[Term.Medium]: 'Last 6 Months',
+	[Term.Long]: 'All Time',
+}
+
+
+const terms = Object.values(Term)
+
+
+//type TermsObj<T = null> =  Record<TermKey, T>
+//function termsFactory(): TermsObj {
+		
+function termsFactory(): Record<Term, any> {
+	return {
+		[Term.Short]: {},
+		[Term.Long]: {},
+		[Term.Medium]: {},
+	}
+}
+
+function typesFactory(): Record<Types, any> {
+	return {
+		[Types.Tracks]: {},
+		[Types.Artists]: {},
+	}
+}
+
 
 const App = () => {
 	// get our token response, check if it's valid
-	const [data, setData] = useState(null)
-	const [playing, setPlaying] = useState(null)
-	const [term, setCurrentTerm] = useState(terms[0])
-	const [type, setCurentType] = useState('tracks')
+	const [data, setData] = React.useState(null)
+	const [newData, setNewData] = React.useState()
+	const [playing, setPlaying] = React.useState(null)
+	const [term, setCurrentTerm] = React.useState<Term>(Term.Short)
+	const [type, setCurentType] = React.useState<Types>(Types.Tracks)
 
-	const setType = type => () => setCurentType(type)
-	const setTerm = term => () => setCurrentTerm(term)
+	const setType = (type: Types) => () => setCurentType(type)
+	const setTerm = (term: Term) => () => setCurrentTerm(term)
 
 	const {token} = useLogin()
 
+	React.useEffect(() => {
+		console.log({term, type})
+	}, [term, type])
+
+
+
 	async function getUserData() {
-		const self = await SpotifyApi.client.get('/me') // makeSpotifyRequest('/me', access_token)
-		const types = ['tracks', 'artists']
+		// todo: types
+		const self = await SpotifyApi.client.get('/me') 
+		const types = Object.values(Types)
 			
 		const data = await Promise.all(types.map(async type => {
 			const resp = await Promise.all(terms.map(async term => {
@@ -51,16 +85,15 @@ const App = () => {
 			const topData = resp.reduce((acc, cur) => {
 				acc[cur.term] = cur.data
 				return acc
-			}, {})
+			}, termsFactory())
 			return {type, data: topData}
 		}))
 
 		const topMusic = data.reduce((acc, cur) => {
 			acc[cur.type] = cur.data
 			return acc
-		}, {})
+		}, typesFactory())
 
-		//return {self, top: topMusic}
 				
 		setData({self, top: topMusic})
 	}
@@ -81,15 +114,15 @@ const App = () => {
 		}
 	}
 
-	function playTrack(uri) {
+	function playTrack(uri: string) {
 		return SpotifyApi.client.put('/me/player/play', {uris: [uri]})
 	}
 
-	function playArtist(uri) {
+	function playArtist(uri: string) {
 		return SpotifyApi.client.put('/me/player/play', {context_uri: uri})
 	}
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (!token || data) return
 		getUserData()
 		fetchNowplaying()
@@ -161,7 +194,7 @@ const App = () => {
 					
 
 				<div className="">
-					{type === 'artists' 
+					{type === Types.Artists
 						? <PopularArtists playArtist={playArtist} artists={data.top[type][term].items} />
 						: <PopularTracks playTrack={playTrack} tracks={data.top[type][term].items} />
 					}

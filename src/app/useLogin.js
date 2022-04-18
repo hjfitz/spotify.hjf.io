@@ -22,7 +22,6 @@ export default function useLogin() {
 
 	useEffect(() => {
 		const {hash} = window.location
-		console.log(hash)
 		if (!hash) return 
 
 		const response = hash.substring(1).split('&').reduce((acc, cur) => {
